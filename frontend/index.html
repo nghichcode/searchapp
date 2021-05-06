@@ -2,9 +2,225 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Hola</title>
+    <title>Global Search</title>
+
+    <!-- Bootstrap CSS CDN -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.0/css/bootstrap.min.css"
+          integrity="sha384-9gVQ4dYFwwWSjIDZnLEWnxCjeSWFphJiwGPXr1jddIhOegiu1FwO5qRGvFXOdJZ4" crossorigin="anonymous">
+    <!-- Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"
+            integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.0/umd/popper.min.js"
+            integrity="sha384-cs/chFZiN24E4KMATLdqdvsezGxaGsi4hLGOzlXwp5UZB1LY//20VyM2taTB4QvJ"
+            crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.0/js/bootstrap.min.js"
+            integrity="sha384-uefMccjFJAIv6A+rW+L4AHf99KvxDjWSu1z9VI8SKNVmz4sk7buKt/6v9KI65qnm"
+            crossorigin="anonymous"></script>
+
+    <!-- Vue material -->
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700,400italic|Material+Icons">
+    <link rel="stylesheet" href="https://unpkg.com/vue-material/dist/vue-material.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/vue-material/dist/theme/default.css">
+    <!-- Vue -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
+    <script src="https://unpkg.com/vue-material"></script>
 </head>
 <body>
+
+<div id="search_app">
+    <md-toolbar class="md-transparent">
+        <div class="md-toolbar-row row">
+            <div class="md-toolbar-section-start col-4">
+                <md-button class="md-icon-button">
+                    <md-icon>menu</md-icon>
+                </md-button>
+            </div>
+
+            <md-content :class="['md-elevation-5 col-5 px-3 py-2 dropdown-search', {show:isShowSearchBox}]"
+                        v-handle-click-outside="clickOutsideSearchBox"
+                        id="dropdown-search">
+                <div class="position-relative">
+                    <md-icon class="position-absolute color-grey">search</md-icon>
+                    <input class="w-100 border border-0 invisible-focus search-input"
+                           :placeholder="searchPlaceHolder"
+                           @focus="toggleSearchBox(true)"
+                           v-model="searchText"
+                    />
+                    <md-icon v-if="searchText" @click="setSearchText('')"
+                             class="position-absolute color-grey search-close">close
+                    </md-icon>
+                </div>
+                <div class="dropdown-search-menu w-100 align-items-center pb-0">
+                    <div v-for="(item, index) in SEARCH_TYPE"
+                         v-if="item.val!=SEARCH_TYPE_ID.ALL"
+                         @click="setSearchType(index)"
+                         class="dropdown-item">
+                        <md-icon class="mr-3 mb-1">web</md-icon>
+                        <span>${item.label}}</span>
+                    </div>
+                    <md-divider></md-divider>
+                    <div class="dropdown-item my-2">
+                        <span><b>Advanced Search</b></span>
+                    </div>
+                </div>
+            </md-content>
+
+            <div class="md-toolbar-section-end col-3">
+                <md-button class="md-icon-button">
+                    <md-icon>refresh</md-icon>
+                </md-button>
+
+                <md-button class="md-icon-button">
+                    <md-icon>more_vert</md-icon>
+                </md-button>
+            </div>
+        </div>
+    </md-toolbar>
+
+</div>
+
+<script type="text/javascript">
+  const SEARCH_TYPE_ID = {ALL: -1, SITE: 1, PAGE: 2};
+  const SEARCH_TYPE = [
+    {label: 'All types', placeholder: 'Search', val: SEARCH_TYPE_ID.ALL},
+    {label: 'Sites', placeholder: 'type:page', val: SEARCH_TYPE_ID.SITE},
+    {label: 'Pages', placeholder: 'type:site ', val: SEARCH_TYPE_ID.PAGE}
+  ];
+  const DEFAULT_SEARCH_TYPE = 0;
+
+  Vue.use(VueMaterial.default);
+
+  const app = new Vue({
+    delimiters: ['${', '}}'],
+    el: '#search_app',
+    data: () => ({
+      isShowSearchBox: true,
+      searchText: '',
+      SEARCH_TYPE_ID: SEARCH_TYPE_ID,
+      SEARCH_TYPE: SEARCH_TYPE,
+      searchData: {
+        type: SEARCH_TYPE[DEFAULT_SEARCH_TYPE],
+        typeId: DEFAULT_SEARCH_TYPE,
+      },
+      searchConfig: {
+        sites: [
+          {name: 'Demo Site', updateAt: 'Jan 11, 2020'},
+          {name: 'Java', updateAt: 'Feb 12, 2020'},
+          {name: 'Javascript', updateAt: 'Jan 22, 2020'},
+        ],
+      },
+    }),
+    methods: {
+      setSearchText: function (txt = '') {
+        this.searchText = txt;
+      },
+      setSearchType: function (id = DEFAULT_SEARCH_TYPE) {
+        console.log(id);
+        this.searchData.type = SEARCH_TYPE[DEFAULT_SEARCH_TYPE];
+        this.searchData.typeId = DEFAULT_SEARCH_TYPE;
+      },
+      toggleSearchBox: function (show = true) {
+        this.isShowSearchBox = show;
+      },
+      clickOutsideSearchBox: function (ev) {
+        this.toggleSearchBox(false);
+      },
+    },
+    computed: {
+      searchPlaceHolder: function () {
+        return this.searchData.type.placeholder
+      },
+      searchTypePlaceholder: function () {
+        return this.searchData.type.placeholder;
+      }
+    },
+    directives: {
+      'handle-click-outside': {
+        bind: function (el, binding, vNode) {
+          if (typeof binding.value !== 'function') console.warn('Should not use function');
+          // Define Handler and cache it on the element
+          const bubble = binding.modifiers.bubble;
+          const handler = (e) => {
+            if (bubble || (!el.contains(e.target) && el !== e.target)) {
+              binding.value(e);
+            }
+          };
+          el.__vueClickOutside__ = handler;
+          document.addEventListener('click', handler);
+        },
+
+        unbind: function (el, binding) {
+          // Remove Event Listeners
+          document.removeEventListener('click', el.__vueClickOutside__);
+          el.__vueClickOutside__ = null
+        }
+      }
+    }
+  });
+</script>
+
+<style>
+    .input-search input.md-input, label.text-search {
+        color: #9e9e9e !important;
+        -webkit-text-fill-color: #9e9e9e !important;
+    }
+
+    .invisible-focus {
+        outline: none !important;
+    }
+
+    .md-toolbar, .md-toolbar-row {
+        will-change: unset !important;
+    }
+
+    .dropdown-search.show .dropdown-search-menu {
+        display: block;
+    }
+
+    .dropdown-search-backdrop {
+        position: fixed;
+        display: block;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 900;
+        background-color: #fcafca00;
+    }
+
+    .dropdown-search-menu {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        z-index: 1000;
+        display: none;
+        float: left;
+        min-width: 10rem;
+        padding: .5rem 0;
+        margin: .125rem 0 0;
+        font-size: 1rem;
+        color: #212529;
+        text-align: left;
+        list-style: none;
+        background-color: #fff;
+        background-clip: padding-box;
+        border: 1px solid rgba(0, 0, 0, .15);
+        border-radius: .25rem;
+    }
+
+    .search-input {
+        padding: 0 28px;
+    }
+
+    .search-close {
+        right: 0;
+    }
+
+    .color-grey {
+        color: #bdbdbd !important;
+    }
+</style>
 
 </body>
 </html>
