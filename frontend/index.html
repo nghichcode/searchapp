@@ -31,37 +31,170 @@
 <div id="search_app">
     <md-toolbar class="md-transparent">
         <div class="md-toolbar-row row">
-            <div class="md-toolbar-section-start col-4">
+            <div class="md-toolbar-section-start col-3">
                 <md-button class="md-icon-button">
                     <md-icon>menu</md-icon>
                 </md-button>
             </div>
 
-            <md-content :class="['md-elevation-5 col-5 px-3 py-2 dropdown-search', {show:isShowSearchBox}]"
+            <md-content :class="['col-6 md-elevation-5 px-3 py-2 dropdown-search', {show:isShowSearchBox}]"
                         v-handle-click-outside="clickOutsideSearchBox"
                         id="dropdown-search">
                 <div class="position-relative">
                     <md-icon class="position-absolute color-grey">search</md-icon>
                     <input class="w-100 border border-0 invisible-focus search-input"
-                           :placeholder="searchPlaceHolder"
+                           placeholder="Search"
                            @focus="toggleSearchBox(true)"
-                           v-model="searchText"
+                           v-model="searchValue"
                     />
-                    <md-icon v-if="searchText" @click="setSearchText('')"
-                             class="position-absolute color-grey search-close">close
-                    </md-icon>
+                    <span v-if="searchText || searchData.typeId !== null" @click="clearSearch()"
+                          class="position-absolute color-grey search-close">
+                        <md-icon>close</md-icon>
+                    </span>
                 </div>
                 <div class="dropdown-search-menu w-100 align-items-center pb-0">
-                    <div v-for="(item, index) in SEARCH_TYPE"
-                         v-if="item.val!=SEARCH_TYPE_ID.ALL"
-                         @click="setSearchType(index)"
-                         class="dropdown-item">
-                        <md-icon class="mr-3 mb-1">web</md-icon>
-                        <span>${item.label}}</span>
+                    <div v-if="searchData.typeId === SEARCH_ADVANCED_TYPE.val" class="px-3 py-2">
+                        <div class="container-fluid">
+                            <div class="row">
+                                <div class="col-3 d-flex align-items-center">
+                                    <span class="color-grey-600">Type</span>
+                                </div>
+                                <div class="col-9">
+                                    <div class="md-layout md-gutter">
+                                        <div class="md-layout-item">
+                                            <md-field>
+                                                <md-select v-model="forms.searchType.val" placeholder="Type">
+                                                    <md-option v-for="item in forms.searchType.choices"
+                                                               :value="item.val">${item.label}}
+                                                    </md-option>
+                                                </md-select>
+                                            </md-field>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-3 d-flex align-items-center">
+                                    <span class="color-grey-600">Owner</span>
+                                </div>
+                                <div class="col-9">
+                                    <div class="md-layout md-gutter">
+                                        <div class="md-layout-item">
+                                            <md-field>
+                                                <md-select v-model="forms.owner.val" placeholder="Owner">
+                                                    <md-option v-for="item in forms.owner.choices"
+                                                               :value="item.val">${item.label}}
+                                                    </md-option>
+                                                </md-select>
+                                            </md-field>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-9 offset-3" v-if="forms.owner.val===forms.owner.ids.SPECIFIC">
+                                    <div class="md-layout md-gutter">
+                                        <div class="md-layout-item">
+                                            <md-field>
+                                                <md-select v-model="forms.user_id" placeholder="Select a person">
+                                                    <md-option v-for="item in forms.users.choices"
+                                                               :value="item.id">${item.name}}
+                                                    </md-option>
+                                                </md-select>
+                                            </md-field>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-9 offset-3">
+                                    <div class="d-flex justify-content-around">
+                                        <md-checkbox v-model="movie">ABC</md-checkbox>
+                                        <md-checkbox v-model="movie">ABC</md-checkbox>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-3 d-flex align-items-center">
+                                    <span class="color-grey-600">Date modified</span>
+                                </div>
+                                <div class="col-9">
+                                    <div class="md-layout md-gutter">
+                                        <div class="md-layout-item">
+                                            <md-field>
+                                                <md-select v-model="movie" name="movie" id="movie"
+                                                           placeholder="Date modified">
+                                                    <md-option value="fight-club">Fight Club</md-option>
+                                                </md-select>
+                                            </md-field>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-3 d-flex align-items-center">
+                                    <span class="color-grey-600">Item Name/Title</span>
+                                </div>
+                                <div class="col-9">
+                                    <div class="md-layout md-gutter">
+                                        <div class="md-layout-item">
+                                            <md-field md-inline>
+                                                <label>Enter a term that matches part of the...</label>
+                                                <md-input></md-input>
+                                            </md-field>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-3 d-flex align-items-center">
+                                    <span class="color-grey-600">Has the words</span>
+                                </div>
+                                <div class="col-9">
+                                    <div class="md-layout md-gutter">
+                                        <div class="md-layout-item">
+                                            <md-field md-inline>
+                                                <label>Enter words found in the item</label>
+                                                <md-input></md-input>
+                                            </md-field>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-right mt-2">
+                                <md-button class="md-raised">RESET</md-button>
+                                <md-button class="md-raised md-primary">SEARCH</md-button>
+                            </div>
+                        </div>
                     </div>
-                    <md-divider></md-divider>
-                    <div class="dropdown-item my-2">
-                        <span><b>Advanced Search</b></span>
+                    <div v-else-if="searchData.typeId === SEARCH_TYPE_IDS.SITE">
+                        <div v-for="(item, index) in sites"
+                             class="dropdown-item">
+                            <md-icon class="mr-3 mb-1">web</md-icon>
+                            <span>${item.name}}</span>
+                            <span class="float-right">${item.updateAt}}</span>
+                        </div>
+                    </div>
+                    <div v-else-if="searchData.typeId === SEARCH_TYPE_IDS.PAGE">
+                        <div v-for="(item, index) in pages"
+                             class="dropdown-item">
+                            <md-icon class="mr-3 mb-1">web</md-icon>
+                            <span>${item.name}}</span>
+                            <span class="float-right">${item.updateAt}}</span>
+                        </div>
+                    </div>
+                    <div v-else="">
+                        <div>
+                            <div v-for="(item, index) in SEARCH_TYPE_CHOICES"
+                                 @click="setSearchType(item.val)"
+                                 v-if="item.val!=SEARCH_TYPE_IDS.ALL"
+                                 class="dropdown-item">
+                                <md-icon class="mr-3 mb-1">web</md-icon>
+                                <span>${item.label}}</span>
+                            </div>
+                        </div>
+                        <md-divider></md-divider>
+                        <div class="my-2">
+                            <div class="dropdown-item" @click="setSearchType(SEARCH_ADVANCED_TYPE.val)">
+                                <span><b>Advanced Search</b></span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </md-content>
@@ -81,32 +214,87 @@
 </div>
 
 <script type="text/javascript">
-  const SEARCH_TYPE_ID = {ALL: -1, SITE: 1, PAGE: 2};
-  const SEARCH_TYPE = [
-    {label: 'All types', placeholder: 'Search', val: SEARCH_TYPE_ID.ALL},
-    {label: 'Sites', placeholder: 'type:page', val: SEARCH_TYPE_ID.SITE},
-    {label: 'Pages', placeholder: 'type:site ', val: SEARCH_TYPE_ID.PAGE}
-  ];
-  const DEFAULT_SEARCH_TYPE = 0;
-
   Vue.use(VueMaterial.default);
+  const ConstantMap = function (data) {
+    let constant = [];
+    for (let key in data) {
+      constant[key] = data[key].val;
+    }
+    let constantMap = {
+      constant: constant,
+      choices: data,
+      findKeybyId: function (id) {
+        if (id === null) return id;
+        const choices = this.choices;
+        for (let item in choices) {
+          if (choices[item].val === id) return choices;
+        }
+      }
+    };
+    return constantMap;
+  }
+  const SEARCH_TYPE = ConstantMap({
+    ALL: {label: 'All types', placeholder: 'All types', val: -1},
+    SITE: {label: 'Sites', placeholder: 'type:page', val: 1},
+    PAGE: {label: 'Pages', placeholder: 'type:site ', val: 2}
+  });
+  SEARCH_ADVANCED_TYPE = {label: 'Advanced Search', placeholder: 'Search', val: -1};
+  const OWNER = ConstantMap({
+    ALL: {label: 'Anyone', val: -1},
+    BY_ME: {label: 'Owned by me ', val: 1},
+    NOT_BY_ME: {label: 'Not owned by me', val: 2},
+    SPECIFIC: {label: 'Specific person...', val: 3}
+  });
 
   const app = new Vue({
     delimiters: ['${', '}}'],
     el: '#search_app',
     data: () => ({
+      SEARCH_TYPE_IDS: SEARCH_TYPE.constant,
+      SEARCH_TYPE_CHOICES: SEARCH_TYPE.choices,
+      SEARCH_ADVANCED_TYPE: SEARCH_ADVANCED_TYPE,
       isShowSearchBox: true,
       searchText: '',
-      SEARCH_TYPE_ID: SEARCH_TYPE_ID,
-      SEARCH_TYPE: SEARCH_TYPE,
       searchData: {
-        type: SEARCH_TYPE[DEFAULT_SEARCH_TYPE],
-        typeId: DEFAULT_SEARCH_TYPE,
+        typeId: SEARCH_ADVANCED_TYPE.val,//typeId for show search type
       },
-      searchConfig: {
+      forms: {
+        searchType: {
+          choices: SEARCH_TYPE.choices,
+          val: SEARCH_TYPE.constant.ALL,
+        },
+        owner: {
+          choices: OWNER.choices,
+          ids: OWNER.constant,
+          val: OWNER.constant.ALL,
+        },
+        users: {
+          choices: [
+            {name: 'user_1', id: 1},
+            {name: 'user_2', id: 2},
+            {name: 'user_3', id: 3},
+            {name: 'user_4', id: 4},
+          ],
+          val: -1,
+        }
+      },
+      searchResult: {
         sites: [
           {name: 'Demo Site', updateAt: 'Jan 11, 2020'},
           {name: 'Java', updateAt: 'Feb 12, 2020'},
+          {name: 'Javascript', updateAt: 'Jan 22, 2020'},
+        ],
+        pages: [
+          {name: 'Demo Page', updateAt: 'Jan 11, 2020'},
+          {name: 'Java', updateAt: 'Feb 12, 2020'},
+          {name: 'Javascript', updateAt: 'Jan 22, 2020'},
+          {name: 'Javascript', updateAt: 'Jan 22, 2020'},
+          {name: 'Javascript', updateAt: 'Jan 22, 2020'},
+          {name: 'Javascript', updateAt: 'Jan 22, 2020'},
+          {name: 'Javascript', updateAt: 'Jan 22, 2020'},
+          {name: 'Javascript', updateAt: 'Jan 22, 2020'},
+          {name: 'Javascript', updateAt: 'Jan 22, 2020'},
+          {name: 'Javascript', updateAt: 'Jan 22, 2020'},
           {name: 'Javascript', updateAt: 'Jan 22, 2020'},
         ],
       },
@@ -115,25 +303,71 @@
       setSearchText: function (txt = '') {
         this.searchText = txt;
       },
-      setSearchType: function (id = DEFAULT_SEARCH_TYPE) {
-        console.log(id);
-        this.searchData.type = SEARCH_TYPE[DEFAULT_SEARCH_TYPE];
-        this.searchData.typeId = DEFAULT_SEARCH_TYPE;
+      setSearchType: function (val = null) {
+        this.toggleSearchBox(false);
+        this.searchData.typeId = val;
       },
       toggleSearchBox: function (show = true) {
         this.isShowSearchBox = show;
       },
       clickOutsideSearchBox: function (ev) {
         this.toggleSearchBox(false);
+        this.toggleSearchBox(!this.isShowSearchBox);
+      },
+      clearSearch: function () {
+        this.setSearchText('');
+        this.setSearchType(null);
       },
     },
     computed: {
-      searchPlaceHolder: function () {
-        return this.searchData.type.placeholder
+      searchValue: {
+        get: function () {
+          let index = SEARCH_TYPE.findKeybyId(this.searchData.typeId);
+          let placeholder = (index == null) ? '' : this.SEARCH_TYPE_CHOICES[index].placeholder;
+          console.log(this.forms.searchType.val);
+          index = SEARCH_TYPE.findKeybyId(this.forms.searchType.val);
+          placeholder = (index == null) ? '' : this.SEARCH_TYPE_CHOICES[index].placeholder;
+          if (this.forms.owner.val === OWNER.constant.BY_ME) {
+            placeholder += ' owner:me';
+          } else if (this.forms.owner.val === OWNER.constant.NOT_BY_ME) {
+            placeholder += ' !owner:me';
+          } else if (this.forms.owner.val === OWNER.constant.SPECIFIC) {
+            placeholder += ' !owner:me';
+          }
+          return placeholder;
+        },
+        set: function (val) {
+          this.setSearchText(val);
+        }
       },
-      searchTypePlaceholder: function () {
-        return this.searchData.type.placeholder;
-      }
+      user_id: {
+        get: function () {
+          return this.forms.users.val.id;
+        },
+        set: function (val) {
+          console.log(1, JSON.stringify(val));
+          this.forms.users.choices.find(function (it) {
+            return it.id === val;
+          })
+        }
+      },
+      sites: function () {
+        if (!this.searchResult.sites) return [];
+        const self = this;
+        return this.searchResult.sites.filter(function (it, id) {
+          if (!self.searchText) return true;
+          return it.name.toLowerCase().includes(self.searchText.toLowerCase());
+        });
+      },
+      pages: function () {
+        if (!this.searchResult.pages) return [];
+        const self = this;
+        return this.searchResult.pages.filter(function (it, id) {
+          if (!self.searchText) return true;
+          return it.name.toLowerCase().includes(self.searchText.toLowerCase());
+        });
+
+      },
     },
     directives: {
       'handle-click-outside': {
@@ -149,7 +383,6 @@
           el.__vueClickOutside__ = handler;
           document.addEventListener('click', handler);
         },
-
         unbind: function (el, binding) {
           // Remove Event Listeners
           document.removeEventListener('click', el.__vueClickOutside__);
@@ -190,6 +423,8 @@
     }
 
     .dropdown-search-menu {
+        max-height: 100vh; /**for overflow*/
+        overflow-y: auto; /**for overflow*/
         position: absolute;
         top: 100%;
         left: 0;
@@ -219,6 +454,10 @@
 
     .color-grey {
         color: #bdbdbd !important;
+    }
+
+    .color-grey-600 {
+        color: #757575 !important;
     }
 </style>
 
