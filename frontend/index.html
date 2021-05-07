@@ -44,7 +44,7 @@
                     <md-icon class="position-absolute color-grey">search</md-icon>
                     <input class="w-100 border border-0 invisible-focus search-input"
                            placeholder="Search"
-                           @focus="toggleSearchBox(true)"
+                           @focus="focusSearchBox=true" @keyup.enter.prevent="advancedSearch()"
                            v-model="searchText"
                     />
                     <span v-if="searchText || globalSearchType.val !== null" @click="clearSearch()"
@@ -52,7 +52,8 @@
                         <md-icon>close</md-icon>
                     </span>
                 </div>
-                <div class="dropdown-search-menu w-100 align-items-center pb-0">
+                <div class="dropdown-search-menu w-100 align-items-center pb-0"
+                     v-handle-click-outside="clickOutsideSearchMenu">
                     <div v-if="globalSearchType.val === SEARCH_ADVANCED_TYPE.val" class="px-3 py-2">
                         <div class="container-fluid">
                             <div class="row">
@@ -195,7 +196,7 @@
                     <div v-else-if="globalSearchType.val === globalSearchType.ids.SITE">
                         <div v-for="(item, index) in sites"
                              class="dropdown-item">
-                            <md-icon class="mr-3 mb-1">web</md-icon>
+                            <md-icon class="mr-3 mb-1">article</md-icon>
                             <span>${item.name}}</span>
                             <span class="float-right">${item.updateAt}}</span>
                         </div>
@@ -210,7 +211,6 @@
                             <span class="float-right">${item.updateAt}}</span>
                         </div>
                         <div v-if="!pages || pages.length<1" class="dropdown-item text-center">
-                            <md-icon class="mr-3 mb-1">web</md-icon>
                             <span>Trống</span>
                         </div>
                     </div>
@@ -221,7 +221,7 @@
                             <span class="float-right">${item.updateAt}}</span>
                         </div>
                         <div v-for="(item, index) in sites" class="dropdown-item">
-                            <md-icon class="mr-3 mb-1">web</md-icon>
+                            <md-icon class="mr-3 mb-1">article</md-icon>
                             <span>${item.name}}</span>
                             <span class="float-right">${item.updateAt}}</span>
                         </div>
@@ -236,7 +236,7 @@
                                  @click="setGlobalSearchType(item.val)"
                                  v-if="item.val!=globalSearchType.ids.ALL"
                                  class="dropdown-item">
-                                <md-icon class="mr-3 mb-1">web</md-icon>
+                                <md-icon class="mr-3 mb-1">${item.icon}}</md-icon>
                                 <span>${item.label}}</span>
                             </div>
                         </div>
@@ -267,6 +267,11 @@
 <script type="text/javascript">
   Vue.use(VueMaterial.default);
   const API_PATH = 'http://localhost:3000';
+  const activeUser = {
+    "name": "user_1",
+    "email": "user_1@nc.com",
+    "id": 1
+  };// Assume that user logged in and i have user data
   const getFullPath = function (params = []) {
     if (!params) return '';
     if (!Array.isArray(params)) return API_PATH + '/' + params;
@@ -296,16 +301,16 @@
     return constantMap;
   };
   const SEARCH_TYPE = ConstantMap({
-    ALL: {label: 'All types', placeholder: 'All types', val: -1},
-    SITE: {label: 'Sites', placeholder: 'type:site', val: 1},
-    PAGE: {label: 'Pages', placeholder: 'type:page ', val: 2}
+    ALL: {label: 'All types', placeholder: '', icon: '', val: -1},
+    SITE: {label: 'Sites', placeholder: 'type:site', icon: 'article', val: 1},
+    PAGE: {label: 'Pages', placeholder: 'type:page ', icon: 'web', val: 2}
   });
-  SEARCH_ADVANCED_TYPE = {label: 'Advanced Search', placeholder: '', val: -1};
+  SEARCH_ADVANCED_TYPE = {label: 'Advanced Search', placeholder: '', val: 9};
   const OWNER = ConstantMap({
-    ALL: {label: 'Anyone', val: -1},
-    BY_ME: {label: 'Owned by me ', val: 1},
-    NOT_BY_ME: {label: 'Not owned by me', val: 2},
-    SPECIFIC: {label: 'Specific person...', val: 3}
+    ALL: {label: 'Anyone', placeholder: '', val: -1},
+    BY_ME: {label: 'Owned by me ', placeholder: 'owner:me', val: 1},
+    NOT_BY_ME: {label: 'Not owned by me', placeholder: '!owner:me', val: 2},
+    SPECIFIC: {label: 'Specific person...', placeholder: 'owner:', val: 3}
   });
   const MODIFIED_TYPE = ConstantMap({
     ANY: {label: 'Anytime', placeholder: '', val: -1},
@@ -325,7 +330,9 @@
         val: SEARCH_ADVANCED_TYPE.val,
       },
       SEARCH_ADVANCED_TYPE: SEARCH_ADVANCED_TYPE,
-      isShowSearchBox: true,
+      focusSearchItem: true,
+      focusSearchBox: true,
+      focusSearchMenu: true,
       searchText: '',
       forms: {
         searchType: {
@@ -341,8 +348,8 @@
           choices: [],
           val: 0,
         },
-        starred: {label: 'Starred', val: false},
-        trash: {label: 'In Trash', val: false},
+        starred: {label: 'Starred', placeholder: 'is:starred', val: null},
+        trash: {label: 'In Trash', placeholder: 'is:trash', val: null},
         modifiedType: {
           choices: MODIFIED_TYPE.choices,
           ids: MODIFIED_TYPE.constant,
@@ -363,15 +370,16 @@
         this.searchText = txt;
       },
       setGlobalSearchType: function (val = null) {
-        this.toggleSearchBox(false);
+        this.focusSearchItem = true;
         this.globalSearchType.val = val;
       },
-      toggleSearchBox: function (show = true) {
-        this.isShowSearchBox = show;
-      },
       clickOutsideSearchBox: function (ev) {
-        this.toggleSearchBox(false);
-        this.toggleSearchBox(!this.isShowSearchBox);
+        this.focusSearchBox = false;
+        if (!this.focusSearchBox && !this.focusSearchMenu && !this.globalSearchType.val) this.focusSearchItem = false;
+      },
+      clickOutsideSearchMenu: function (ev) {
+        this.focusSearchMenu = false;
+        if (!this.focusSearchBox && !this.focusSearchMenu && !this.globalSearchType.val) this.focusSearchItem = false;
       },
       resetSearch: function () {
         this.setSearchText('');
@@ -388,6 +396,8 @@
 
       },
       clearSearch: function () {
+        this.focusSearchBox = true;
+        this.focusSearchItem = true;
         this.setSearchText('');
         this.setGlobalSearchType(null);
       },
@@ -398,7 +408,18 @@
         }
       },
       advancedSearch: function () {
-
+        this.focusSearchMenu = true;
+        this.focusSearchItem = true;
+        this.setGlobalSearchType(SEARCH_TYPE.constant.ALL);
+        const self = this;
+        fetch(getFullPath('search/all/')).then(function (res) {
+          return res.json();
+        }).then(function (data) {
+          if (data) {
+            if (Array.isArray(data.sites)) self.searchResult.sites = data.sites;
+            if (Array.isArray(data.pages)) self.searchResult.pages = data.pages;
+          }
+        })
       },
       userSearch: function () {
         const self = this;
@@ -426,51 +447,132 @@
       },
     },
     computed: {
+      isShowSearchBox: function () {
+        return this.focusSearchBox || this.focusSearchMenu || this.focusSearchItem;
+      },
       sites: function () {
         if (!this.searchResult.sites) return [];
+        if (this.forms.searchType.val === SEARCH_TYPE.constant.PAGE) return [];
         const self = this;
-        return this.searchResult.sites.map(function (it, id) {
+        return this.searchResult.sites.filter(function (it, id) {
+          let match = true;
+          if (self.forms.owner.val) {
+            let ownerType = self.forms.owner.val;
+            if (ownerType === OWNER.constant.BY_ME) match = match && it.ownerId === activeUser.id;
+            else if (ownerType === OWNER.constant.SPECIFIC) match = match && it.ownerId === self.forms.users.val;
+            else if (ownerType === OWNER.constant.NOT_BY_ME) match = match && it.ownerId !== activeUser.id;
+          }
+          if (self.forms.starred.val !== null) match = match && it.starred === self.forms.starred.val;
+          if (self.forms.trash.val !== null) match = match && it.trash === self.forms.trash.val;
+          if (self.forms.modifiedType.val) {
+            const A_DAY = 86400000;
+            let modifiedType = self.forms.modifiedType.val;
+            let fromDate, toDate;
+            let updateAt = parseInt(it.updateAt);
+            if (modifiedType === MODIFIED_TYPE.constant.RANGE) {
+              fromDate = self.forms.modifiedDateFrom.val;
+              toDate = self.forms.modifiedDateTo.val;
+              match = match && (updateAt > fromDate && updateAt <= toDate);
+            } else if (modifiedType !== MODIFIED_TYPE.constant.ANY) {
+              toDate = new Date().getTime();
+              if (modifiedType !== MODIFIED_TYPE.constant.TODAY) {
+                fromDate = toDate - A_DAY;
+              } else if (modifiedType !== MODIFIED_TYPE.constant.YESTERDAY) {
+                fromDate = toDate - A_DAY * 2;
+                toDate = toDate - A_DAY;
+              } else if (modifiedType !== MODIFIED_TYPE.constant.NINETY_DAYS) {
+                fromDate = toDate - A_DAY * 90;
+                toDate = toDate;
+              }
+              match = match && (updateAt > fromDate && updateAt <= toDate);
+            }
+          }
+          if (self.forms.itemNameTitle.val)
+            match = match && it.name.toLowerCase().indexOf(self.forms.itemNameTitle.val.toLowerCase()) > 0;
+          if (self.forms.containWords.val) {
+            match = match && it.name.toLowerCase().indexOf(self.forms.containWords.val.toLowerCase()) > 0;
+          }
+          return match;
+        }).map(function (it, id) {
           return {...it, updateAt: it.updateAt ? formatDate(it.updateAt) : ''}
-        }).filter(function (it, id) {
-          return true;
         });
       },
       pages: function () {
         if (!this.searchResult.pages) return [];
+        if (this.forms.searchType.val === SEARCH_TYPE.constant.SITE) return [];
         const self = this;
-        return this.searchResult.pages.map(function (it, id) {
+        return this.searchResult.pages.filter(function (it, id) {
+          let match = true;
+          if (self.forms.owner.val) {
+            let ownerType = self.forms.owner.val;
+            console.log(ownerType);
+            if (ownerType === OWNER.constant.BY_ME) match = match && it.ownerId === activeUser.id;
+            else if (ownerType === OWNER.constant.SPECIFIC) match = match && it.ownerId === self.forms.users.val;
+            else if (ownerType === OWNER.constant.NOT_BY_ME) match = match && it.ownerId !== activeUser.id;
+          }
+          if (self.forms.starred.val !== null) match = match && it.starred === self.forms.starred.val;
+          if (self.forms.trash.val !== null) match = match && it.trash === self.forms.trash.val;
+          if (self.forms.modifiedType.val) {
+            const A_DAY = 86400000;
+            let modifiedType = self.forms.modifiedType.val;
+            let fromDate, toDate;
+            let updateAt = parseInt(it.updateAt);
+            if (modifiedType === MODIFIED_TYPE.constant.RANGE) {
+              fromDate = self.forms.modifiedDateFrom.val;
+              toDate = self.forms.modifiedDateTo.val;
+            } else if (modifiedType !== MODIFIED_TYPE.constant.ANY) {
+              toDate = new Date().getTime();
+              if (modifiedType !== MODIFIED_TYPE.constant.TODAY) {
+                fromDate = toDate - A_DAY;
+              } else if (modifiedType !== MODIFIED_TYPE.constant.YESTERDAY) {
+                fromDate = toDate - A_DAY * 2;
+                toDate = toDate - A_DAY;
+              } else if (modifiedType !== MODIFIED_TYPE.constant.NINETY_DAYS) {
+                fromDate = toDate - A_DAY * 90;
+                toDate = toDate;
+              }
+            }
+            match = match && (updateAt > fromDate && updateAt <= toDate);
+          }
+          if (self.forms.itemNameTitle.val)
+            match = match && it.name.toLowerCase().indexOf(self.forms.itemNameTitle.val.toLowerCase()) > 0;
+          if (self.forms.containWords.val) {
+            match = match && it.name.toLowerCase().indexOf(self.forms.containWords.val.toLowerCase()) > 0;
+          }
+          return match;
+        }).map(function (it, id) {
           return {...it, updateAt: it.updateAt ? formatDate(it.updateAt) : ''}
-        }).filter(function (it, id) {
-          return true;
         });
       },
     },
     watch: {
       'forms': {
         handler: function (forms) {
+          this.focusSearchItem = true;
           let key = SEARCH_TYPE.findKeyById(forms.searchType.val);
           let searchText = (
             (key === null || forms.searchType.val === SEARCH_TYPE.constant.ALL)
               ? '' : SEARCH_TYPE.choices[key].placeholder + ' '
           );
-          if (forms.owner.val === OWNER.constant.BY_ME) {
-            searchText += 'owner:me ';
-          } else if (forms.owner.val === OWNER.constant.NOT_BY_ME) {
-            searchText += '!owner:me ';
+          key = OWNER.findKeyById(forms.owner.val);
+          if (forms.owner.val === OWNER.constant.BY_ME || forms.owner.val === OWNER.constant.NOT_BY_ME) {
+            searchText += (OWNER.choices[key].placeholder + ' ');
           } else if (forms.owner.val === OWNER.constant.SPECIFIC) {
             let user = this.findUserById(forms.users.choices, forms.users.val);
-            if (user && user.hasOwnProperty('name')) searchText += 'owner:' + user.email + ' ';
+            if (user && user.hasOwnProperty('name'))
+              searchText += (OWNER.choices[key].placeholder + user.email + ' ');
           }
-          if (forms.starred.val) searchText += 'is:starred ';
-          if (forms.trash.val) searchText += 'is:trash ';
+          if (forms.starred.val) searchText += forms.starred.placeholder + ' ';
+          if (forms.trash.val) searchText += forms.trash.placeholder + ' ';
 
           key = MODIFIED_TYPE.findKeyById(forms.modifiedType.val);
           if (forms.modifiedType.val) searchText += (
             (key === null || forms.modifiedType.val === MODIFIED_TYPE.constant.RANGE)
               ? '' : MODIFIED_TYPE.choices[key].placeholder + ' '
           );
-
-          this.setSearchText(searchText)
+          if (forms.itemNameTitle.val) searchText += 'title:' + forms.itemNameTitle.val + ' ';
+          if (forms.containWords.val) searchText += forms.containWords.val;
+          if (searchText.trim()) this.setSearchText(searchText);
         },
         deep: true
       },
@@ -482,11 +584,13 @@
         handler: function (val) {
           if (val === SEARCH_ADVANCED_TYPE.val) {
             this.searchText = SEARCH_ADVANCED_TYPE.placeholder;
-            return;
+          } else if (val === SEARCH_TYPE.constant.ALL) {
+            this.searchText = SEARCH_TYPE.choices.ALL.placeholder;
+          } else {
+            this.basicSearch(val);
+            let key = SEARCH_TYPE.findKeyById(val);
+            if (key in SEARCH_TYPE.choices) this.searchText = SEARCH_TYPE.choices[key].placeholder;
           }
-          this.basicSearch(val);
-          let key = SEARCH_TYPE.findKeyById(val);
-          if (key in SEARCH_TYPE.choices) this.searchText = SEARCH_TYPE.choices[key].placeholder;
         },
       },
     },
