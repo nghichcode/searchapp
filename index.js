@@ -1,18 +1,20 @@
-const express = require('express')
-const {sites} = require('./app/sites.js')
-const {pages} = require('./app/pages.js')
+const express = require('express');
+const {search_pages, search_sites, search_all} = require('./app/search.js');
+const {users} = require('./app/users.js');
 
-const app = express()
-const port = 3000
-
-app.use('', express.static('frontend'))
+const app = express();
+const port = 3000;
 
 app.get('/hello', (req, res) => {
   res.send('Hello World!')
-})
-app.get('/sites/search', sites)
-app.get('/pages/search', pages)
+});
+app.get('/search/pages/', search_pages);
+app.get('/search/sites/', search_sites);
+app.get('/search/all/', search_all);
+app.get('/users/', users);
+
+app.use('', express.static('frontend'));
 
 app.listen(port, () => {
-  console.log(`Example app listening at http://localhost:${port}`)
-})
+  console.log(`Listening at http://localhost:${port}`);
+});

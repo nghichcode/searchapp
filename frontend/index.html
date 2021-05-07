@@ -45,15 +45,15 @@
                     <input class="w-100 border border-0 invisible-focus search-input"
                            placeholder="Search"
                            @focus="toggleSearchBox(true)"
-                           v-model="searchValue"
+                           v-model="searchText"
                     />
-                    <span v-if="searchText || searchData.typeId !== null" @click="clearSearch()"
+                    <span v-if="searchText || globalSearchType.val !== null" @click="clearSearch()"
                           class="position-absolute color-grey search-close">
                         <md-icon>close</md-icon>
                     </span>
                 </div>
                 <div class="dropdown-search-menu w-100 align-items-center pb-0">
-                    <div v-if="searchData.typeId === SEARCH_ADVANCED_TYPE.val" class="px-3 py-2">
+                    <div v-if="globalSearchType.val === SEARCH_ADVANCED_TYPE.val" class="px-3 py-2">
                         <div class="container-fluid">
                             <div class="row">
                                 <div class="col-3 d-flex align-items-center">
@@ -93,20 +93,30 @@
                                 <div class="col-9 offset-3" v-if="forms.owner.val===forms.owner.ids.SPECIFIC">
                                     <div class="md-layout md-gutter">
                                         <div class="md-layout-item">
-                                            <md-field>
-                                                <md-select v-model="forms.user_id" placeholder="Select a person">
+                                            <md-field class="position-relative">
+                                                <md-select v-model="forms.users.val" placeholder="Select a person">
                                                     <md-option v-for="item in forms.users.choices"
                                                                :value="item.id">${item.name}}
                                                     </md-option>
+                                                    <md-option
+                                                            v-if="!forms.users.choices || forms.users.choices.length<1"
+                                                    >Trống
+                                                    </md-option>
                                                 </md-select>
+                                                <span class="position-absolute search-clear-user"
+                                                      v-if="forms.users.val"
+                                                      @click="forms.users.val=null"
+                                                >
+                                                    <md-icon>remove_circle</md-icon>
+                                                </span>
                                             </md-field>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-9 offset-3">
-                                    <div class="d-flex justify-content-around">
-                                        <md-checkbox v-model="movie">ABC</md-checkbox>
-                                        <md-checkbox v-model="movie">ABC</md-checkbox>
+                                    <div class="d-flex justify-content-between">
+                                        <md-checkbox v-model="forms.starred.val">${forms.starred.label}}</md-checkbox>
+                                        <md-checkbox v-model="forms.trash.val">${forms.trash.label}}</md-checkbox>
                                     </div>
                                 </div>
                             </div>
@@ -118,11 +128,30 @@
                                     <div class="md-layout md-gutter">
                                         <div class="md-layout-item">
                                             <md-field>
-                                                <md-select v-model="movie" name="movie" id="movie"
+                                                <md-select v-model="forms.modifiedType.val"
                                                            placeholder="Date modified">
-                                                    <md-option value="fight-club">Fight Club</md-option>
+                                                    <md-option
+                                                            v-for="item in forms.modifiedType.choices"
+                                                            :value="item.val">
+                                                        ${item.label}}
+                                                    </md-option>
                                                 </md-select>
                                             </md-field>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row" v-if="forms.modifiedType.val==forms.modifiedType.ids.RANGE">
+                                <div class="col-3 d-flex align-items-center">
+                                    <span class="color-grey-600">Modified Between</span>
+                                </div>
+                                <div class="col-9">
+                                    <div class="md-layout">
+                                        <div class="md-layout-item w-50 pr-2">
+                                            <md-datepicker v-model="forms.modifiedDateFrom.val"></md-datepicker>
+                                        </div>
+                                        <div class="md-layout-item w-50 pl-2">
+                                            <md-datepicker v-model="forms.modifiedDateTo.val"></md-datepicker>
                                         </div>
                                     </div>
                                 </div>
@@ -136,7 +165,7 @@
                                         <div class="md-layout-item">
                                             <md-field md-inline>
                                                 <label>Enter a term that matches part of the...</label>
-                                                <md-input></md-input>
+                                                <md-input v-model="forms.itemNameTitle.val"></md-input>
                                             </md-field>
                                         </div>
                                     </div>
@@ -151,39 +180,61 @@
                                         <div class="md-layout-item">
                                             <md-field md-inline>
                                                 <label>Enter words found in the item</label>
-                                                <md-input></md-input>
+                                                <md-input v-model="forms.containWords.val"></md-input>
                                             </md-field>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                             <div class="text-right mt-2">
-                                <md-button class="md-raised">RESET</md-button>
-                                <md-button class="md-raised md-primary">SEARCH</md-button>
+                                <md-button class="md-raised" @click="resetSearch()">RESET</md-button>
+                                <md-button class="md-raised md-primary" @click="advancedSearch()">SEARCH</md-button>
                             </div>
                         </div>
                     </div>
-                    <div v-else-if="searchData.typeId === SEARCH_TYPE_IDS.SITE">
+                    <div v-else-if="globalSearchType.val === globalSearchType.ids.SITE">
                         <div v-for="(item, index) in sites"
                              class="dropdown-item">
                             <md-icon class="mr-3 mb-1">web</md-icon>
                             <span>${item.name}}</span>
                             <span class="float-right">${item.updateAt}}</span>
                         </div>
+                        <div v-if="!sites || sites.length<1" class="dropdown-item text-center">
+                            <span>Trống</span>
+                        </div>
                     </div>
-                    <div v-else-if="searchData.typeId === SEARCH_TYPE_IDS.PAGE">
-                        <div v-for="(item, index) in pages"
-                             class="dropdown-item">
+                    <div v-else-if="globalSearchType.val === globalSearchType.ids.PAGE">
+                        <div v-for="(item, index) in pages" class="dropdown-item">
                             <md-icon class="mr-3 mb-1">web</md-icon>
                             <span>${item.name}}</span>
                             <span class="float-right">${item.updateAt}}</span>
                         </div>
+                        <div v-if="!pages || pages.length<1" class="dropdown-item text-center">
+                            <md-icon class="mr-3 mb-1">web</md-icon>
+                            <span>Trống</span>
+                        </div>
+                    </div>
+                    <div v-else-if="globalSearchType.val === globalSearchType.ids.ALL">
+                        <div v-for="(item, index) in pages" class="dropdown-item">
+                            <md-icon class="mr-3 mb-1">web</md-icon>
+                            <span>${item.name}}</span>
+                            <span class="float-right">${item.updateAt}}</span>
+                        </div>
+                        <div v-for="(item, index) in sites" class="dropdown-item">
+                            <md-icon class="mr-3 mb-1">web</md-icon>
+                            <span>${item.name}}</span>
+                            <span class="float-right">${item.updateAt}}</span>
+                        </div>
+                        <div v-if="(!pages || pages.length<1) && (!sites || sites.length<1)"
+                             class="dropdown-item text-center">
+                            <span>Trống</span>
+                        </div>
                     </div>
                     <div v-else="">
                         <div>
-                            <div v-for="(item, index) in SEARCH_TYPE_CHOICES"
-                                 @click="setSearchType(item.val)"
-                                 v-if="item.val!=SEARCH_TYPE_IDS.ALL"
+                            <div v-for="(item, key) in globalSearchType.choices"
+                                 @click="setGlobalSearchType(item.val)"
+                                 v-if="item.val!=globalSearchType.ids.ALL"
                                  class="dropdown-item">
                                 <md-icon class="mr-3 mb-1">web</md-icon>
                                 <span>${item.label}}</span>
@@ -191,7 +242,7 @@
                         </div>
                         <md-divider></md-divider>
                         <div class="my-2">
-                            <div class="dropdown-item" @click="setSearchType(SEARCH_ADVANCED_TYPE.val)">
+                            <div class="dropdown-item" @click="setGlobalSearchType(SEARCH_ADVANCED_TYPE.val)">
                                 <span><b>Advanced Search</b></span>
                             </div>
                         </div>
@@ -215,6 +266,16 @@
 
 <script type="text/javascript">
   Vue.use(VueMaterial.default);
+  const API_PATH = 'http://localhost:3000';
+  const getFullPath = function (params = []) {
+    if (!params) return '';
+    if (!Array.isArray(params)) return API_PATH + '/' + params;
+    return API_PATH + '/' + params.join('/');
+  };
+  const formatDate = function (date) {
+    if (!date || !parseInt(date)) return '';
+    return new Date(parseInt(date)).toDateString().substr(3);
+  };
   const ConstantMap = function (data) {
     let constant = [];
     for (let key in data) {
@@ -223,41 +284,49 @@
     let constantMap = {
       constant: constant,
       choices: data,
-      findKeybyId: function (id) {
+      findKeyById: function (id) {
         if (id === null) return id;
         const choices = this.choices;
+        window.cc = choices;
         for (let item in choices) {
-          if (choices[item].val === id) return choices;
+          if (choices[item].val === id) return item;
         }
       }
     };
     return constantMap;
-  }
+  };
   const SEARCH_TYPE = ConstantMap({
     ALL: {label: 'All types', placeholder: 'All types', val: -1},
-    SITE: {label: 'Sites', placeholder: 'type:page', val: 1},
-    PAGE: {label: 'Pages', placeholder: 'type:site ', val: 2}
+    SITE: {label: 'Sites', placeholder: 'type:site', val: 1},
+    PAGE: {label: 'Pages', placeholder: 'type:page ', val: 2}
   });
-  SEARCH_ADVANCED_TYPE = {label: 'Advanced Search', placeholder: 'Search', val: -1};
+  SEARCH_ADVANCED_TYPE = {label: 'Advanced Search', placeholder: '', val: -1};
   const OWNER = ConstantMap({
     ALL: {label: 'Anyone', val: -1},
     BY_ME: {label: 'Owned by me ', val: 1},
     NOT_BY_ME: {label: 'Not owned by me', val: 2},
     SPECIFIC: {label: 'Specific person...', val: 3}
   });
+  const MODIFIED_TYPE = ConstantMap({
+    ANY: {label: 'Anytime', placeholder: '', val: -1},
+    TODAY: {label: 'Today ', placeholder: 'modified:today', val: 1},
+    YESTERDAY: {label: 'Yesterday', placeholder: 'modified:yesterday', val: 2},
+    NINETY_DAYS: {label: 'Last 90 days', placeholder: 'modified:90 days', val: 3},
+    RANGE: {label: 'Date range', placeholder: '', val: 4}
+  });
 
   const app = new Vue({
     delimiters: ['${', '}}'],
     el: '#search_app',
     data: () => ({
-      SEARCH_TYPE_IDS: SEARCH_TYPE.constant,
-      SEARCH_TYPE_CHOICES: SEARCH_TYPE.choices,
+      globalSearchType: {
+        choices: SEARCH_TYPE.choices,
+        ids: SEARCH_TYPE.constant,
+        val: SEARCH_ADVANCED_TYPE.val,
+      },
       SEARCH_ADVANCED_TYPE: SEARCH_ADVANCED_TYPE,
       isShowSearchBox: true,
       searchText: '',
-      searchData: {
-        typeId: SEARCH_ADVANCED_TYPE.val,//typeId for show search type
-      },
       forms: {
         searchType: {
           choices: SEARCH_TYPE.choices,
@@ -269,43 +338,33 @@
           val: OWNER.constant.ALL,
         },
         users: {
-          choices: [
-            {name: 'user_1', id: 1},
-            {name: 'user_2', id: 2},
-            {name: 'user_3', id: 3},
-            {name: 'user_4', id: 4},
-          ],
-          val: -1,
-        }
+          choices: [],
+          val: 0,
+        },
+        starred: {label: 'Starred', val: false},
+        trash: {label: 'In Trash', val: false},
+        modifiedType: {
+          choices: MODIFIED_TYPE.choices,
+          ids: MODIFIED_TYPE.constant,
+          val: MODIFIED_TYPE.constant.ANY,
+        },
+        modifiedDateFrom: {val: null},
+        modifiedDateTo: {val: null},
+        itemNameTitle: {val: ''},
+        containWords: {val: ''},
       },
       searchResult: {
-        sites: [
-          {name: 'Demo Site', updateAt: 'Jan 11, 2020'},
-          {name: 'Java', updateAt: 'Feb 12, 2020'},
-          {name: 'Javascript', updateAt: 'Jan 22, 2020'},
-        ],
-        pages: [
-          {name: 'Demo Page', updateAt: 'Jan 11, 2020'},
-          {name: 'Java', updateAt: 'Feb 12, 2020'},
-          {name: 'Javascript', updateAt: 'Jan 22, 2020'},
-          {name: 'Javascript', updateAt: 'Jan 22, 2020'},
-          {name: 'Javascript', updateAt: 'Jan 22, 2020'},
-          {name: 'Javascript', updateAt: 'Jan 22, 2020'},
-          {name: 'Javascript', updateAt: 'Jan 22, 2020'},
-          {name: 'Javascript', updateAt: 'Jan 22, 2020'},
-          {name: 'Javascript', updateAt: 'Jan 22, 2020'},
-          {name: 'Javascript', updateAt: 'Jan 22, 2020'},
-          {name: 'Javascript', updateAt: 'Jan 22, 2020'},
-        ],
+        sites: [],
+        pages: [],
       },
     }),
     methods: {
       setSearchText: function (txt = '') {
         this.searchText = txt;
       },
-      setSearchType: function (val = null) {
+      setGlobalSearchType: function (val = null) {
         this.toggleSearchBox(false);
-        this.searchData.typeId = val;
+        this.globalSearchType.val = val;
       },
       toggleSearchBox: function (show = true) {
         this.isShowSearchBox = show;
@@ -314,59 +373,121 @@
         this.toggleSearchBox(false);
         this.toggleSearchBox(!this.isShowSearchBox);
       },
+      resetSearch: function () {
+        this.setSearchText('');
+        this.forms.searchType.val = SEARCH_TYPE.constant.ALL;
+        this.forms.owner.val = OWNER.constant.ALL;
+        this.forms.users.val = 0;
+        this.forms.starred.val = null;
+        this.forms.trash.val = null;
+        this.forms.modifiedType.val = MODIFIED_TYPE.constant.ANY;
+        this.forms.modifiedDateFrom.val = null;
+        this.forms.modifiedDateTo.val = null;
+        this.forms.itemNameTitle.val = '';
+        this.forms.containWords.val = '';
+
+      },
       clearSearch: function () {
         this.setSearchText('');
-        this.setSearchType(null);
+        this.setGlobalSearchType(null);
+      },
+      findUserById: function (users, id) {
+        if (!users || !Array.isArray(users)) return null;
+        for (let index in users) {
+          if (users[index] && users[index].id === id) return users[index];
+        }
+      },
+      advancedSearch: function () {
+
+      },
+      userSearch: function () {
+        const self = this;
+        const userLimit = Math.floor(Math.random() * 10 + 5)
+        fetch(getFullPath('users/') + '?limit=' + userLimit).then(function (res) {
+          return res.json();
+        }).then(function (data) {
+          if (data && data.users && Array.isArray(data.users)) self.forms.users.choices = data.users;
+        })
+      },
+      basicSearch: function (type) {
+        if (type !== SEARCH_TYPE.constant.SITE && type !== SEARCH_TYPE.constant.PAGE) return;
+        const self = this;
+        fetch(getFullPath('search/all/')).then(function (res) {
+          return res.json();
+        }).then(function (data) {
+          if (data) {
+            if (type === SEARCH_TYPE.constant.SITE && data.sites && Array.isArray(data.sites)) {
+              self.searchResult.sites = data.sites;
+            } else if (type === SEARCH_TYPE.constant.PAGE && data.pages && Array.isArray(data.pages)) {
+              self.searchResult.pages = data.pages;
+            }
+          }
+        })
       },
     },
     computed: {
-      searchValue: {
-        get: function () {
-          let index = SEARCH_TYPE.findKeybyId(this.searchData.typeId);
-          let placeholder = (index == null) ? '' : this.SEARCH_TYPE_CHOICES[index].placeholder;
-          console.log(this.forms.searchType.val);
-          index = SEARCH_TYPE.findKeybyId(this.forms.searchType.val);
-          placeholder = (index == null) ? '' : this.SEARCH_TYPE_CHOICES[index].placeholder;
-          if (this.forms.owner.val === OWNER.constant.BY_ME) {
-            placeholder += ' owner:me';
-          } else if (this.forms.owner.val === OWNER.constant.NOT_BY_ME) {
-            placeholder += ' !owner:me';
-          } else if (this.forms.owner.val === OWNER.constant.SPECIFIC) {
-            placeholder += ' !owner:me';
-          }
-          return placeholder;
-        },
-        set: function (val) {
-          this.setSearchText(val);
-        }
-      },
-      user_id: {
-        get: function () {
-          return this.forms.users.val.id;
-        },
-        set: function (val) {
-          console.log(1, JSON.stringify(val));
-          this.forms.users.choices.find(function (it) {
-            return it.id === val;
-          })
-        }
-      },
       sites: function () {
         if (!this.searchResult.sites) return [];
         const self = this;
-        return this.searchResult.sites.filter(function (it, id) {
-          if (!self.searchText) return true;
-          return it.name.toLowerCase().includes(self.searchText.toLowerCase());
+        return this.searchResult.sites.map(function (it, id) {
+          return {...it, updateAt: it.updateAt ? formatDate(it.updateAt) : ''}
+        }).filter(function (it, id) {
+          return true;
         });
       },
       pages: function () {
         if (!this.searchResult.pages) return [];
         const self = this;
-        return this.searchResult.pages.filter(function (it, id) {
-          if (!self.searchText) return true;
-          return it.name.toLowerCase().includes(self.searchText.toLowerCase());
+        return this.searchResult.pages.map(function (it, id) {
+          return {...it, updateAt: it.updateAt ? formatDate(it.updateAt) : ''}
+        }).filter(function (it, id) {
+          return true;
         });
+      },
+    },
+    watch: {
+      'forms': {
+        handler: function (forms) {
+          let key = SEARCH_TYPE.findKeyById(forms.searchType.val);
+          let searchText = (
+            (key === null || forms.searchType.val === SEARCH_TYPE.constant.ALL)
+              ? '' : SEARCH_TYPE.choices[key].placeholder + ' '
+          );
+          if (forms.owner.val === OWNER.constant.BY_ME) {
+            searchText += 'owner:me ';
+          } else if (forms.owner.val === OWNER.constant.NOT_BY_ME) {
+            searchText += '!owner:me ';
+          } else if (forms.owner.val === OWNER.constant.SPECIFIC) {
+            let user = this.findUserById(forms.users.choices, forms.users.val);
+            if (user && user.hasOwnProperty('name')) searchText += 'owner:' + user.email + ' ';
+          }
+          if (forms.starred.val) searchText += 'is:starred ';
+          if (forms.trash.val) searchText += 'is:trash ';
 
+          key = MODIFIED_TYPE.findKeyById(forms.modifiedType.val);
+          if (forms.modifiedType.val) searchText += (
+            (key === null || forms.modifiedType.val === MODIFIED_TYPE.constant.RANGE)
+              ? '' : MODIFIED_TYPE.choices[key].placeholder + ' '
+          );
+
+          this.setSearchText(searchText)
+        },
+        deep: true
+      },
+      'forms.owner.val': function (val) {
+        if (val !== OWNER.constant.SPECIFIC) this.forms.users.val = null;
+        else this.userSearch();
+      },
+      'globalSearchType.val': {
+        handler: function (val) {
+          if (val === SEARCH_ADVANCED_TYPE.val) {
+            this.searchText = SEARCH_ADVANCED_TYPE.placeholder;
+            return;
+          }
+          this.basicSearch(val);
+          let key = SEARCH_TYPE.findKeyById(val);
+          if (key in SEARCH_TYPE.choices) this.searchText = SEARCH_TYPE.choices[key].placeholder;
+        },
       },
     },
     directives: {
@@ -450,6 +571,11 @@
 
     .search-close {
         right: 0;
+    }
+
+    .search-clear-user {
+        right: 0;
+        margin-right: 24px;
     }
 
     .color-grey {
