@@ -1,19 +1,26 @@
 const express = require('express');
-const {search_pages, search_sites, search_all} = require('./app/search.js');
-const {users} = require('./app/users.js');
+const http_proxy = require('http-proxy');
 
 const app = express();
-const port = 3000;
+const port = 52023;
 
-app.get('/hello', (req, res) => {
-  res.send('Hello World!')
+
+const proxy = http_proxy.createProxyServer({
+    host: 'http://10.10.1.28',
+    port: 52023
 });
-app.get('/search/pages/', search_pages);
-app.get('/search/sites/', search_sites);
-app.get('/search/all/', search_all);
-app.get('/users/', users);
 
-app.use('', express.static('frontend'));
+const config = require('./static/config.json');
+app.use('/api/abp/application-configuration', function (req, res) {
+  res.json(config);
+});
+app.use('', express.static('static'));
+
+app.use('/', function(req, res, next) {
+    proxy.web(req, res, {
+        target: 'http://10.10.1.28:52023'
+    }, next);
+});
 
 app.listen(port, () => {
   console.log(`Listening at http://localhost:${port}`);
