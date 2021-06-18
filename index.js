@@ -4,10 +4,13 @@ const http_proxy = require('http-proxy');
 const app = express();
 const port = 52023;
 
+const proxHost = 'http://127.0.0.1';
+const proxPort = 49420;
+
 
 const proxy = http_proxy.createProxyServer({
-    host: 'http://10.10.1.28',
-    port: 52023
+    host: proxHost,
+    port: proxPort
 });
 
 const config = require('./static/config.json');
@@ -18,7 +21,7 @@ app.use('', express.static('static'));
 
 app.use('/', function(req, res, next) {
     proxy.web(req, res, {
-        target: 'http://10.10.1.28:52023'
+        target: proxHost+':'+proxPort
     }, next);
 });
 
